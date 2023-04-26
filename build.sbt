@@ -19,5 +19,6 @@ libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-blaze-client" % http4sBlaze,
   "org.typelevel" %% "cats-core" % catsTypeLevelVersion,
   "ch.qos.logback" % "logback-classic" % logbackVersion,
-  "org.json4s" %% "json4s-jackson" % jsonJacksonVersion
+  "org.json4s" %% "json4s-jackson" % jsonJacksonVersion,
+  "org.scalatest" %% "scalatest" % "3.2.9" % Test
 )

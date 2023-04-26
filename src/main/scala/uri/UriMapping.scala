@@ -1,10 +1,13 @@
 package com.inno.trainee
 package uri
 
+import org.http4s.Uri
+import org.http4s.implicits.uri
+
 object UriMapping {
-  
-  val getCountriesUri: String = "covid19/countries"
-  val worldStatsUri: String = "covid19/stats/world"
-  val countryStatsUri: String = "covid19/stats/country"
-  
+  private val covid19WebApiServiceUri = "https://api.covid19api.com/"
+  val remoteApiCountryStatsUri: String = covid19WebApiServiceUri + "country"
+  val remoteApiWorldStatsUri: String = covid19WebApiServiceUri + "world"
+  val worldStatsUri:String = "world"
+  val countryStatsUri:String = "country"
 }
