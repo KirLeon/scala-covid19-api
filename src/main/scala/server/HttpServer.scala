@@ -39,13 +39,27 @@ object HttpServer extends IOApp {
         s"status/confirmed?from=${countryPeriod.dateFrom}Z&to=${countryPeriod.dateTo}Z"
     )
 
+    sendRequestToRemoteApi(uri)
+  }
+
+  def getWorldStats(countryPeriod: CountryPeriod): IO[Option[String]] = {
+
+    val uri = Uri.fromString(
+      s"${UriMapping.remoteApiWorldStatsUri}" +
+        s"?from=${countryPeriod.dateFrom}Z&to=${countryPeriod.dateTo}Z"
+    )
+
+    sendRequestToRemoteApi(uri)
+  }
+
+  private def sendRequestToRemoteApi(uri: ParseResult[Uri]): IO[Option[String]] = {
     try {
       val request: Request[IO] =
         Request[IO](
           Method.GET,
           uri.getOrElse(throw new InvalidUriException("Invalid URI"))
         )
-        
+
       client.use { client =>
         client.run(request).use { response =>
           response.bodyText.compile.string.map(Option.apply)
@@ -54,7 +68,5 @@ object HttpServer extends IOApp {
     } catch {
       case _: InvalidUriException => IO.pure(None)
     }
-
   }
-
 }

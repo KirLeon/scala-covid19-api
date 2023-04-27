@@ -1,7 +1,7 @@
 package com.inno.trainee
 package service
 
-import model.{CountryPeriod, CovidStats}
+import model.{CountryPeriod, CovidStats, WorldStats}
 import server.HttpServer
 import util.JsonUtils
 
@@ -27,23 +27,64 @@ object CovidCasesService {
       countryPeriod: CountryPeriod
   ): Option[Map[String, Int]] = {
 
-    val covid19apiResponse = HttpServer
-      .getCountryStats(countryPeriod).flatMap {
-      case None => IO.pure("")
-      case Some(str) => IO.pure(str)
-    }
-
-    if (covid19apiResponse.unsafeRunSync().isEmpty) {
+    if (countryPeriod.countryName.isEmpty) {
       return None
     }
 
-    val jsonResponse: String = covid19apiResponse.unsafeRunSync()
+    val covid19apiResponse = HttpServer
+      .getCountryStats(countryPeriod)
+      .flatMap {
+        case None      => IO.pure("")
+        case Some(str) => IO.pure(str)
+      }
+
+    if (parseServerRequest(covid19apiResponse)) {
+      val covidStats =
+        JsonUtils.parseCovidStatsList(covid19apiResponse.unsafeRunSync())
+      Some(getCountryDateCasesList(covidStats))
+    } else {
+      None
+    }
+  }
+
+  def getWorldStats(worldPeriod: CountryPeriod): Option[Map[String, Int]] = {
+    if (
+      worldPeriod.countryName.isEmpty || worldPeriod.countryName.isBlank ||
+      worldPeriod.countryName.toLowerCase().contains("world")
+    ) {
+
+      val covid19apiResponse = HttpServer
+        .getWorldStats(worldPeriod)
+        .flatMap {
+          case None      => IO.pure("")
+          case Some(str) => IO.pure(str)
+        }
+
+      if (parseServerRequest(covid19apiResponse)) {
+        val worldStats =
+          JsonUtils.parseWorldStatsList(covid19apiResponse.unsafeRunSync())
+        Some(getWorldDateCasesList(worldStats))
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  private def parseServerRequest(response: IO[String]): Boolean = {
+
+    if (response.unsafeRunSync().isEmpty) {
+      return false
+    }
+
+    val jsonResponse: String = response.unsafeRunSync()
     val json = parse(jsonResponse)
 
     json match {
-      case JNothing                   => None // пустой JSON-ответ
-      case JString("")                => None // пустая строка
-      case JArray(arr) if arr.isEmpty => None // пустой массив
+      case JNothing                   => false // пустой JSON-ответ
+      case JString("")                => false // пустая строка
+      case JArray(arr) if arr.isEmpty => false // пустой массив
       case JObject(fields)
           if fields
             .find(_._1 == "message")
@@ -52,15 +93,13 @@ object CovidCasesService {
                 .extract[String]
                 .equalsIgnoreCase("Not Found")
             ) =>
-        None // JSON-ответ с полем "message" со значением "Not Found"
+        false
       case _ =>
-        val covidStats = JsonUtils.parseCovidStatsList(jsonResponse)
-        Some(getListOfDateAndCases(covidStats))
+        true
     }
-
   }
 
-  private def getListOfDateAndCases(
+  private def getCountryDateCasesList(
       stats: List[CovidStats]
   ): Map[String, Int] = {
     stats
@@ -73,5 +112,14 @@ object CovidCasesService {
       .sortBy { case (date, _) => date }
       .toMap
   }
-  
+
+  private def getWorldDateCasesList(
+      stats: List[WorldStats]
+  ): Map[String, Int] = {
+    stats
+      .map(stat => (stat.date.split("T")(0), stat.newConfirmed))
+      .drop(1)
+      .sortBy { case (date, _) => date }
+      .toMap
+  }
 }

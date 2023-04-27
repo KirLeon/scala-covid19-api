@@ -1,7 +1,7 @@
 package com.inno.trainee
 package util
 
-import model.{CountryPeriod, CovidStats}
+import model.{CountryPeriod, CovidStats, WorldStats}
 
 import cats.effect.IO
 import org.http4s.headers.`Content-Type`
@@ -35,10 +35,6 @@ object JsonUtils {
       val dateFrom = LocalDateTime.parse(jsonMap("dateFrom")).minusDays(1)
       val dateTo = LocalDateTime.parse(jsonMap("dateTo"))
 
-      if(countryName.isEmpty){
-        return None
-      }
-
       if (dateFrom.isBefore(dateTo)) {
         Some(CountryPeriod(countryName, dateFrom, dateTo))
       }
@@ -70,6 +66,28 @@ object JsonUtils {
       )
     } catch {
       case _: Throwable => None
+    }
+  }
+
+  def parseWorldStatsList(body: String): List[WorldStats] = {
+
+    try {
+      val jsonBody = parse(body)
+      val jsonList = jsonBody.extract[List[Map[String, String]]]
+
+      jsonList.map(jsonMap =>
+        WorldStats(
+          jsonMap("NewConfirmed").toInt,
+          jsonMap("TotalConfirmed").toInt,
+          jsonMap("NewDeaths").toInt,
+          jsonMap("TotalDeaths").toInt,
+          jsonMap("NewRecovered").toInt,
+          jsonMap("TotalRecovered").toInt,
+          jsonMap("Date")
+        )
+      )
+    } catch {
+      case _: Throwable => List.empty[WorldStats]
     }
   }
 
